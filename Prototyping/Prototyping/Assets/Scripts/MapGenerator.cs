@@ -6,14 +6,19 @@ public class MapGenerator : MonoBehaviour
 {
     public DrawType drawType;
 
-    [Header("Displays")]
-    public List<GameObject> terrainDisplays;
-    public List<GameObject> textureDisplays;
+    [Header("Generation")]
+    public int randomSeed;
 
     [Header("Voronoi")]
     public int cellCount;
     public float maxDistanceFromSeedPoint;
     public AnimationCurve heightCurve;
+
+    [Header("Perlin")]
+    public float noiseScale;
+    public int octaves;
+    public float persistance;
+    public float lacunarity;
 
     [Header("Terrain")]
     public int chunkSize;
@@ -27,7 +32,11 @@ public class MapGenerator : MonoBehaviour
     public float placementRaycastStartHeight;
     public float finalPlacementHeightOffset;
 
-    private Dictionary<Vector2Int, Vector2Int[]> pointsDictionary;
+    private Dictionary<Vector2Int, Vector2Int[]> voronoiSeedsDictionary;
+    private Vector2[] octaveOffsets;
+
+    private List<GameObject> terrainDisplays;
+    private List<GameObject> textureDisplays;
 
     public enum DrawType
     {
@@ -38,7 +47,7 @@ public class MapGenerator : MonoBehaviour
 
     public void Generate()
     {
-        ResetDisplayObjects();
+        ClearDisplayObjects();
 
         if (chunkSize <= 0)
         {
@@ -46,7 +55,7 @@ public class MapGenerator : MonoBehaviour
             return;
         }
 
-        if (pointsDictionary == null)
+        if (voronoiSeedsDictionary == null)
         {
             ResetSeeds();
         }
@@ -79,12 +88,16 @@ public class MapGenerator : MonoBehaviour
 
     public void ResetSeeds()
     {
-        pointsDictionary = new Dictionary<Vector2Int, Vector2Int[]>();
+        Random.InitState(randomSeed);
+        voronoiSeedsDictionary = new Dictionary<Vector2Int, Vector2Int[]>();
         Vector2Int[] seeds = GenerateSeeds(new Vector2Int(0, 0));
+
+        octaveOffsets = PerlinNoise.GenerateOctaveOffsets(octaves);
+
         Debug.Log("Seeds reset.");
     }
 
-    private void ResetDisplayObjects()
+    private void ClearDisplayObjects()
     {
         if (textureDisplays != null)
         {
@@ -117,14 +130,14 @@ public class MapGenerator : MonoBehaviour
             {
                 Vector2Int coordinateToCheck = new Vector2Int(coordinates.x + x, coordinates.y + y);
                 Vector2Int[] chunkSeeds;
-                if (pointsDictionary.ContainsKey(coordinateToCheck))
+                if (voronoiSeedsDictionary.ContainsKey(coordinateToCheck))
                 {
-                    chunkSeeds = pointsDictionary[coordinateToCheck];
+                    chunkSeeds = voronoiSeedsDictionary[coordinateToCheck];
                 }
                 else
                 {
                     chunkSeeds = VoronoiDiagram.GenerateSeeds(chunkSize, cellCount);
-                    pointsDictionary.Add(coordinateToCheck, chunkSeeds);
+                    voronoiSeedsDictionary.Add(coordinateToCheck, chunkSeeds);
                 }
 
                 Vector2Int[] offsetSeeds = new Vector2Int[chunkSeeds.Length];
@@ -146,15 +159,17 @@ public class MapGenerator : MonoBehaviour
         textureDisplays.Add(textureDisplay);
         Transform textureTransform = textureDisplay.transform;
         textureTransform.SetParent(transform);
-        textureTransform.localPosition = new Vector3(coordinates.x * (chunkSize), 20f, coordinates.y * chunkSize);
-        textureTransform.localEulerAngles = new Vector3(90, 0, 270);
+        textureTransform.localPosition = new Vector3(coordinates.x * chunkSize, 20f, coordinates.y * chunkSize);
+        textureTransform.localEulerAngles = new Vector3(-90, 0, 0);
         textureTransform.localScale = new Vector3(100, 100, 1);
         SpriteRenderer spriteRenderer = textureDisplay.AddComponent<SpriteRenderer>();
 
-        spriteRenderer.sprite = Sprite.Create(
-            VoronoiDiagram.GenerateTextureByDistance(chunkSize + 1, cellCount, seeds,
-            maxDistanceFromSeedPoint),
-            new Rect(0, 0, chunkSize, chunkSize), Vector2.one * 0.5f);
+        Vector2 perlinOffset = new Vector2(coordinates.x * chunkSize, coordinates.y * chunkSize);
+        //Texture2D texture = VoronoiDiagram.GenerateTextureByDistance(chunkSize + 1,
+        //    cellCount, seeds, maxDistanceFromSeedPoint);
+        Texture2D texture = PerlinNoise.GenerateTexture(chunkSize + 1, noiseScale,
+            octaveOffsets, persistance, lacunarity, perlinOffset);
+        spriteRenderer.sprite = Sprite.Create(texture, new Rect(0, 0, chunkSize, chunkSize), Vector2.one * 0.5f);
     }
 
     private void GenerateMesh(Vector2Int coordinates, Vector2Int[] seeds)
@@ -170,7 +185,7 @@ public class MapGenerator : MonoBehaviour
         terrainTransform.localPosition = new Vector3(coordinates.x * chunkSize, 0, coordinates.y * chunkSize);
 
         MeshData meshData = MeshGenerator.GenerateTerrainMesh(
-            VoronoiDiagram.GenerateHeightMapByDistance(chunkSize + 1, cellCount, seeds, 
+            VoronoiDiagram.GenerateHeightMapByDistance(chunkSize + 1, cellCount, seeds,
             maxDistanceFromSeedPoint), heightMultiplier, heightCurve, levelOfDetail);
 
         DrawMesh(meshData, material, terrainDisplay);
