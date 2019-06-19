@@ -15,30 +15,7 @@ public static class VoronoiDiagram
         return seeds;
     }
 
-    //public static Texture2D GenerateColoredTexture(int textureSize, int cellCount,
-    //    Vector2Int[] seeds)
-    //{
-    //    Color[] cellColors = new Color[seeds.Length];
-    //    for (int i = 0; i < cellCount; i++)
-    //    {
-    //        cellColors[i] = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f), 1f);
-    //    }
-
-    //    Color[] pixels = new Color[textureSize * textureSize];
-
-    //    for (int x = 0; x < textureSize; x++)
-    //    {
-    //        for (int y = 0; y < textureSize; y++)
-    //        {
-    //            int index = x * textureSize + y;
-    //            pixels[index] = cellColors[GetClosestSeedIndex(new Vector2Int(x, y), seeds)];
-    //        }
-    //    }
-
-    //    return TextureTools.CreateTextureFromColorArray(pixels, textureSize, textureSize);
-    //}
-
-    public static float[,] GenerateHeightMapByDistance(int mapSize, int cellCount,
+    public static float[,] GenerateHeightMap(int mapSize, int cellCount,
         Vector2Int[] seeds, float maxDistanceFromSeedPoints)
     {
         float[,] heightMap = new float[mapSize, mapSize];
@@ -63,27 +40,6 @@ public static class VoronoiDiagram
         }
 
         return heightMap;
-    }
-
-    public static Texture2D GenerateTextureByDistance(int textureSize, int cellCount,
-        Vector2Int[] seeds, float maxDistanceFromSeedPoints)
-    {
-        return TextureTools.HeightMapToTexture(
-            GenerateHeightMapByDistance(textureSize, cellCount, seeds, maxDistanceFromSeedPoints));
-    }
-
-    private static float GetMaxDistance(float[] distances)
-    {
-        float maxDistance = float.MinValue;
-        for (int i = 0; i < distances.Length; i++)
-        {
-            if (distances[i] > maxDistance)
-            {
-                maxDistance = distances[i];
-            }
-        }
-
-        return maxDistance;
     }
 
     private static int GetClosestSeedIndex(Vector2Int pixelPosition, Vector2Int[] seeds)

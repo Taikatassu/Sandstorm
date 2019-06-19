@@ -19,12 +19,14 @@ public class MapGenerator : MonoBehaviour
     public int octaves;
     public float persistance;
     public float lacunarity;
+    public float maxHeightNormalizationMultiplier;
 
     [Header("Terrain")]
     public int chunkSize;
     [Range(0, 6)]
     public int levelOfDetail;
     public float heightMultiplier;
+    public float noiseBlendStrength;
     public Material material;
 
     [Header("Object Placement")]
@@ -66,19 +68,25 @@ public class MapGenerator : MonoBehaviour
             {
                 Vector2Int coordinates = new Vector2Int(x, y);
                 Vector2Int[] seeds = GenerateSeeds(coordinates);
+                float[,] heightMap = GenerateBlendedHeightMap(coordinates, seeds);
 
                 switch (drawType)
                 {
                     case DrawType.TextureOnly:
-                        GenerateTexture(coordinates, seeds);
+                        GenerateTexture(coordinates, heightMap);
                         break;
+
                     case DrawType.MeshOnly:
-                        GenerateMesh(coordinates, seeds);
+                        GenerateMesh(coordinates, heightMap);
+                        PlaceObjects(objectsToPlace, placementRaycastStartHeight, finalPlacementHeightOffset);
                         break;
+
                     case DrawType.TextureAndMesh:
-                        GenerateTexture(coordinates, seeds);
-                        GenerateMesh(coordinates, seeds);
+                        GenerateTexture(coordinates, heightMap);
+                        GenerateMesh(coordinates, heightMap);
+                        PlaceObjects(objectsToPlace, placementRaycastStartHeight, finalPlacementHeightOffset);
                         break;
+
                     default:
                         break;
                 }
@@ -93,8 +101,6 @@ public class MapGenerator : MonoBehaviour
         Vector2Int[] seeds = GenerateSeeds(new Vector2Int(0, 0));
 
         octaveOffsets = PerlinNoise.GenerateOctaveOffsets(octaves);
-
-        Debug.Log("Seeds reset.");
     }
 
     private void ClearDisplayObjects()
@@ -154,7 +160,7 @@ public class MapGenerator : MonoBehaviour
         return nearbySeeds.ToArray();
     }
 
-    private void GenerateTexture(Vector2Int coordinates, Vector2Int[] seeds)
+    private void GenerateTexture(Vector2Int coordinates, float[,] heightMap)
     {
         GameObject textureDisplay = new GameObject("TextureDisplay");
         textureDisplays.Add(textureDisplay);
@@ -165,32 +171,23 @@ public class MapGenerator : MonoBehaviour
         textureTransform.localScale = new Vector3(100, 100, 1);
         SpriteRenderer spriteRenderer = textureDisplay.AddComponent<SpriteRenderer>();
 
-        Vector2 perlinOffset = new Vector2(coordinates.x * chunkSize, coordinates.y * chunkSize);
-        Texture2D texture = VoronoiDiagram.GenerateTextureByDistance(chunkSize + 1,
-            cellCount, seeds, maxDistanceFromSeedPoint);
-        //Texture2D texture = PerlinNoise.GenerateTexture(chunkSize + 1, noiseScale,
-        //    octaveOffsets, persistance, lacunarity, perlinOffset);
+        Texture2D texture = TextureTools.HeightMapToTexture(heightMap);
         spriteRenderer.sprite = Sprite.Create(texture, new Rect(0, 0, chunkSize, chunkSize), Vector2.one * 0.5f);
     }
 
-    private void GenerateMesh(Vector2Int coordinates, Vector2Int[] seeds)
+    private void GenerateMesh(Vector2Int coordinates, float[,] heightMap)
     {
         GameObject terrainDisplay = new GameObject("TerrainDisplay");
-        MeshFilter meshFilter = terrainDisplay.AddComponent<MeshFilter>();
-        MeshRenderer meshRenderer = terrainDisplay.AddComponent<MeshRenderer>();
-        MeshCollider meshCollider = terrainDisplay.AddComponent<MeshCollider>();
         terrainDisplays.Add(terrainDisplay);
-
         Transform terrainTransform = terrainDisplay.transform;
         terrainTransform.SetParent(transform);
         terrainTransform.localPosition = new Vector3(coordinates.x * chunkSize, 0, coordinates.y * chunkSize);
+        MeshFilter meshFilter = terrainDisplay.AddComponent<MeshFilter>();
+        MeshRenderer meshRenderer = terrainDisplay.AddComponent<MeshRenderer>();
+        MeshCollider meshCollider = terrainDisplay.AddComponent<MeshCollider>();
 
-        MeshData meshData = MeshGenerator.GenerateTerrainMesh(
-            VoronoiDiagram.GenerateHeightMapByDistance(chunkSize + 1, cellCount, seeds,
-            maxDistanceFromSeedPoint), heightMultiplier, heightCurve, levelOfDetail);
-
+        MeshData meshData = MeshGenerator.GenerateTerrainMesh(heightMap, heightMultiplier, heightCurve, levelOfDetail);
         DrawMesh(meshData, material, terrainDisplay);
-        PlaceObjects(objectsToPlace, placementRaycastStartHeight, finalPlacementHeightOffset);
     }
 
     private void DrawMesh(MeshData meshData, Material material, GameObject terrainDisplay)
@@ -221,5 +218,28 @@ public class MapGenerator : MonoBehaviour
 
             o.SetActive(true);
         }
+    }
+
+    private float[,] GenerateBlendedHeightMap(Vector2Int coordinates, Vector2Int[] seeds)
+    {
+        float[,] heighMap = VoronoiDiagram.GenerateHeightMap(chunkSize + 1, cellCount, seeds,
+               maxDistanceFromSeedPoint);
+
+        if (noiseBlendStrength > 0)
+        {
+            Vector2 perlinOffset = new Vector2(coordinates.x * chunkSize, coordinates.y * chunkSize);
+            float[,] perlinHeightMap = PerlinNoise.GenerateHeightMap(chunkSize + 1, noiseScale,
+                octaveOffsets, persistance, lacunarity, perlinOffset, maxHeightNormalizationMultiplier);
+
+            for (int x = 0; x < chunkSize + 1; x++)
+            {
+                for (int y = 0; y < chunkSize + 1; y++)
+                {
+                    heighMap[x, y] = heighMap[x, y] - (perlinHeightMap[x, y] * noiseBlendStrength);
+                }
+            }
+        }
+
+        return heighMap;
     }
 }
