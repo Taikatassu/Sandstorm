@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ViewerChanger : MonoBehaviour
 {
-    public KeyCode changeViewersKey;
+    public KeyCode changeViewersKey = KeyCode.Space;
     public Transform[] viewers;
     public FollowTarget cameraController;
     [Tooltip("If false, all given viewers are assigned simultaneously. If true, loops through given viewers, one at a time.")]
