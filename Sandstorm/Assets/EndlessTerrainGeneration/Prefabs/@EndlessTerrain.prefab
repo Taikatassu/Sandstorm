@@ -1,0 +1,126 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &6283638434776687784
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6283638434776687785}
+  - component: {fileID: 6283638434776687790}
+  - component: {fileID: 6283638434776687789}
+  - component: {fileID: 6283638434776687791}
+  - component: {fileID: 6516210755891043377}
+  m_Layer: 0
+  m_Name: '@EndlessTerrain'
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6283638434776687785
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6283638434776687784}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6283638434776687790
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6283638434776687784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a2ff3be98eb7544b977a17c4ea509b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  viewers:
+  - {fileID: 0}
+  viewDistance: 150
+  minViewerMoveDistanceToUpdateTerrain: 50
+  disableChunksOutsideOfViewDistance: 1
+  minCleanUpDistance: 200
+  minViewerMoveDistanceToCleanUpTerrain: 200
+  enableCleanUp: 1
+--- !u!114 &6283638434776687789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6283638434776687784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 912b0383394a5d74ca37721cc367c157, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  chunkSize: 100
+  OnChunkVisibilityChange:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &6283638434776687791
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6283638434776687784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07576579046d27e49948813ea6159211, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxDistanceFromSeedPoints: 80
+  cellCount: 8
+  extraHeightMapSize: 1
+--- !u!114 &6516210755891043377
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6283638434776687784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe4abaabf96ba2046a1bb4a1e55acdfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  parent: {fileID: 0}
+  heightMultiplier: 30
+  heightCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0.041389972
+      outSlope: 0.041389972
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.07547265
+    - serializedVersion: 3
+      time: 1.2335205
+      value: 1.1190186
+      inSlope: 0.26411507
+      outSlope: 0.26411507
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.13962263
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  terrainMaterial: {fileID: 2100000, guid: f6e94081d920b0344a538b55b8a60cb4, type: 2}
