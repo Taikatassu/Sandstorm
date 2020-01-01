@@ -920,7 +920,7 @@ PrefabInstance:
     - target: {fileID: 6283638434776687790, guid: fb8b86dbbc335e147b84ed8bf5fda2e8,
         type: 3}
       propertyPath: viewDistance
-      value: 400
+      value: 250
       objectReference: {fileID: 0}
     - target: {fileID: 6516210755891043377, guid: fb8b86dbbc335e147b84ed8bf5fda2e8,
         type: 3}
@@ -944,7 +944,7 @@ PrefabInstance:
     - target: {fileID: 9208972765261870243, guid: 51f059ba348de964ca7b4ef582ba551f,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 31.6
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9208972765261870243, guid: 51f059ba348de964ca7b4ef582ba551f,
         type: 3}
@@ -954,7 +954,7 @@ PrefabInstance:
     - target: {fileID: 9208972765261870243, guid: 51f059ba348de964ca7b4ef582ba551f,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 28.6
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9208972765261870243, guid: 51f059ba348de964ca7b4ef582ba551f,
         type: 3}
@@ -1010,6 +1010,11 @@ PrefabInstance:
         type: 3}
       propertyPath: maxSpawnScale
       value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9208972765261870242, guid: 51f059ba348de964ca7b4ef582ba551f,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 51f059ba348de964ca7b4ef582ba551f, type: 3}

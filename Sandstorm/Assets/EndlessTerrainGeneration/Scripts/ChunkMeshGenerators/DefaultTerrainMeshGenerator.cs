@@ -25,29 +25,61 @@ public class DefaultTerrainMeshGenerator : MonoBehaviour, ITerrainMeshGenerator
         public Vector2Int coordinates;
         public int chunkSize;
         public Action<MeshData> callback;
+
         public Vector3[] vertices;
         public int[] triangles;
         public Vector2[] uvs;
 
-        int triangleIndex;
+        Vector3[] boarderVertices;
+        int[] boarderTriangles;
 
-        public MeshGenerationData(Vector2Int coordinates, int chunkSize, Action<MeshData> callback,
-                        int meshWidth, int meshHeight)
+        int triangleIndex = 0;
+        int boarderTriangleIndex = 0;
+
+        public MeshGenerationData(Vector2Int coordinates, int chunkSize, Action<MeshData> callback, int verticesPerLine)
         {
             this.coordinates = coordinates;
             this.chunkSize = chunkSize;
             this.callback = callback;
-            vertices = new Vector3[meshWidth * meshHeight];
-            uvs = new Vector2[meshWidth * meshHeight];
-            triangles = new int[(meshWidth - 1) * (meshHeight - 1) * 6];
+
+            vertices = new Vector3[verticesPerLine * verticesPerLine];
+            triangles = new int[(verticesPerLine - 1) * (verticesPerLine - 1) * 6];
+            uvs = new Vector2[verticesPerLine * verticesPerLine];
+
+            boarderVertices = new Vector3[verticesPerLine * 4 + 4];
+            boarderTriangles = new int[24 * verticesPerLine];
+
+        }
+
+        public void AddVertex(Vector3 vertexPosition, Vector2 uv, int vertexIndex)
+        {
+            if (vertexIndex < 0)
+            {
+                boarderVertices[-vertexIndex - 1] = vertexPosition;
+            }
+            else
+            {
+                vertices[vertexIndex] = vertexPosition;
+                uvs[vertexIndex] = uv;
+            }
         }
 
         public void AddTriangle(int a, int b, int c)
         {
-            triangles[triangleIndex] = a;
-            triangles[triangleIndex + 1] = b;
-            triangles[triangleIndex + 2] = c;
-            triangleIndex += 3;
+            if (a < 0 || b < 0 || c < 0)
+            {
+                boarderTriangles[boarderTriangleIndex] = a;
+                boarderTriangles[boarderTriangleIndex + 1] = b;
+                boarderTriangles[boarderTriangleIndex + 2] = c;
+                boarderTriangleIndex += 3;
+            }
+            else
+            {
+                triangles[triangleIndex] = a;
+                triangles[triangleIndex + 1] = b;
+                triangles[triangleIndex + 2] = c;
+                triangleIndex += 3;
+            }
         }
 
         public Mesh CreateMesh()
@@ -88,7 +120,8 @@ public class DefaultTerrainMeshGenerator : MonoBehaviour, ITerrainMeshGenerator
     private void MeshGenerationThread(Vector2Int coordinates, int chunkSize, float[,] heightMap,
                                          Action<MeshData> callback)
     {
-        MeshGenerationData meshData = GenerateMesh(coordinates, chunkSize, heightMap, callback);
+        // TODO: Try to get GenerateMeshAlt() working here without seams / gaps between mesh chunks
+        MeshGenerationData meshData = GenerateMeshAlt(coordinates, chunkSize, heightMap, callback);
         lock (chunkMeshThreadInfoQueue)
         {
             // Store the generated height map to the queue
@@ -100,31 +133,27 @@ public class DefaultTerrainMeshGenerator : MonoBehaviour, ITerrainMeshGenerator
                                        Action<MeshData> callback)
     {
         int levelOfDetail = 0;
-        int width = heightMap.GetLength(0);
-        int length = heightMap.GetLength(1);
-        float topLeftX = (width - 1) / -2f;
-        float topLeftZ = (length - 1) / 2f;
+        int meshSize = heightMap.GetLength(0);
+        float topLeftX = (meshSize - 1) / -2f;
+        float topLeftZ = (meshSize - 1) / 2f;
 
         int meshSimplificationIncrement = (levelOfDetail == 0)
             ? 1
             : levelOfDetail * 2;
-        int verticesPerLine = (width - 1) / meshSimplificationIncrement + 1;
+        int verticesPerLine = (meshSize - 1) / meshSimplificationIncrement + 1;
 
-        MeshGenerationData meshGenData = new MeshGenerationData(coordinates, chunkSize, callback,
-                                                                           verticesPerLine, verticesPerLine);
+        MeshGenerationData meshGenData = new MeshGenerationData(coordinates, chunkSize, callback, verticesPerLine);
         int vertexIndex = 0;
 
-        for (int x = 0; x < width; x += meshSimplificationIncrement)
+        for (int x = 0; x < meshSize; x += meshSimplificationIncrement)
         {
-            for (int y = 0; y < length; y += meshSimplificationIncrement)
+            for (int y = 0; y < meshSize; y += meshSimplificationIncrement)
             {
-                meshGenData.vertices[vertexIndex]
-                    = new Vector3(topLeftX + x, heightCurve.Evaluate(heightMap[x, y]) * heightMultiplier,
-                                  topLeftZ + y - length);
+                float height = heightCurve.Evaluate(heightMap[x, y]) * heightMultiplier;
+                meshGenData.vertices[vertexIndex] = new Vector3(topLeftX + x, height, topLeftZ + y - meshSize);
+                meshGenData.uvs[vertexIndex] = new Vector2(x / (float)meshSize, y / (float)meshSize);
 
-                meshGenData.uvs[vertexIndex] = new Vector2(x / (float)width, y / (float)length);
-
-                if (x < width - 1 && y < length - 1)
+                if (x < meshSize - 1 && y < meshSize - 1)
                 {
                     meshGenData.AddTriangle(vertexIndex, vertexIndex + verticesPerLine + 1, vertexIndex + verticesPerLine);
                     meshGenData.AddTriangle(vertexIndex + verticesPerLine + 1, vertexIndex, vertexIndex + 1);
@@ -156,5 +185,83 @@ public class DefaultTerrainMeshGenerator : MonoBehaviour, ITerrainMeshGenerator
                                                                                        meshData.chunkSize);
 
         return meshObject;
+    }
+
+    private MeshGenerationData GenerateMeshAlt(Vector2Int coordinates, int chunkSize, float[,] heightMap,
+                                              Action<MeshData> callback)
+    {
+        int levelOfDetail = 0;
+        int meshSimplificationIncrement = (levelOfDetail == 0) ? 1 : levelOfDetail * 2;
+
+        int boarderedSize = heightMap.GetLength(0);
+        int meshSize = boarderedSize * meshSimplificationIncrement;
+        int meshSizeUnsimplified = boarderedSize;
+
+        float topLeftX = (meshSizeUnsimplified - 1) / -2f;
+        float topLeftZ = (meshSizeUnsimplified - 1) / 2f;
+
+        int verticesPerLine = (meshSize - 1) / meshSimplificationIncrement + 1;
+
+        MeshGenerationData meshGenData = new MeshGenerationData(coordinates, chunkSize, callback, verticesPerLine);
+
+        int[,] vertexIndicesMap = new int[boarderedSize, boarderedSize];
+        int meshVertexIndex = 0;
+        int boarderVertexIndex = -1;
+
+        for (int x = 0; x < boarderedSize; x += meshSimplificationIncrement)
+        {
+            for (int y = 0; y < boarderedSize; y += meshSimplificationIncrement)
+            {
+                bool isBoarderVertex = (y == 0 || y == boarderedSize - 1
+                    || x == 0 || x == boarderedSize - 1);
+
+                if (isBoarderVertex)
+                {
+                    vertexIndicesMap[x, y] = boarderVertexIndex;
+                    boarderVertexIndex--;
+                }
+                else
+                {
+                    vertexIndicesMap[x, y] = meshVertexIndex;
+                    meshVertexIndex++;
+                }
+            }
+        }
+
+        for (int x = 0; x < boarderedSize; x += meshSimplificationIncrement)
+        {
+            for (int y = 0; y < boarderedSize; y += meshSimplificationIncrement)
+            {
+                int vertexIndex = vertexIndicesMap[x, y];
+                Vector2 percent = new Vector2((x - meshSimplificationIncrement) / (float)meshSize,
+                    (y - meshSimplificationIncrement) / (float)meshSize);
+                float height = heightCurve.Evaluate(heightMap[x, y]) * heightMultiplier;
+
+                Vector3 vertexPosition =
+                    new Vector3(topLeftX + percent.x * meshSizeUnsimplified, height,
+                    topLeftZ + percent.y * meshSizeUnsimplified - meshSizeUnsimplified);
+
+                meshGenData.AddVertex(vertexPosition, percent, vertexIndex);
+
+                if (x < boarderedSize - 1 && y < boarderedSize - 1)
+                {
+                    int a = vertexIndicesMap[x, y];
+                    int b = vertexIndicesMap[x + meshSimplificationIncrement, y];
+                    int c = vertexIndicesMap[x, y + meshSimplificationIncrement];
+                    int d = vertexIndicesMap[x + meshSimplificationIncrement, y + meshSimplificationIncrement];
+
+                    //meshGenData.AddTriangle(a, d, c);
+                    //meshGenData.AddTriangle(d, a, b);
+                    meshGenData.AddTriangle(a, c, d);
+                    meshGenData.AddTriangle(d, b, a);
+                }
+
+                vertexIndex++;
+            }
+        }
+
+        //meshData.FinalizeMesh();
+
+        return meshGenData;
     }
 }
